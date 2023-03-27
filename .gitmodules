@@ -1,0 +1,3 @@
+[submodule "rpg_mpc"]
+	path = rpg_mpc
+	url = git@github.com:rachelzh9/rpg_mpc.git
