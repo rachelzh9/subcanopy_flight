@@ -8,6 +8,7 @@ git clone git@github.com:rachelzh9/subcanopy_flight.git
 ```
 
 ## Running
+Launching quadrotor in an empty world with sample trajectory tracking
 ```
-roslaunch rpg_rotors_interface quadrotor_empty_world.launch use_mpc:=true
+roslaunch rpg_mpc follow_trajectory.launch
 ```
