@@ -5,13 +5,13 @@ using namespace std;
 
 class Tree{
     public:
-        Tree(int nDOFs, double* armstart_anglesV_rad)
+        Tree(int nDOFs, double* start_node)
         {
             numDOFS = nDOFs;
             nodes.clear();
             edges.clear();
             costs.clear();
-            nodes.push_back(armstart_anglesV_rad);
+            nodes.push_back(start_node);
             costs[0] = 0.0;
         }
 
