@@ -119,6 +119,8 @@ include_directories(
   ${catkin_INCLUDE_DIRS}
 )
 
+# target_link_libraries(${PROJECT_NAME} yaml-cpp)
+
 ## Declare a C++ library
 # add_library(${PROJECT_NAME}
 #   src/${PROJECT_NAME}/rrt_planner.cpp
