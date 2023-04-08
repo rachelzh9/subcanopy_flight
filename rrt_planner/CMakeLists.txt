@@ -102,8 +102,8 @@ find_package(catkin REQUIRED COMPONENTS
 ## CATKIN_DEPENDS: catkin_packages dependent projects also need
 ## DEPENDS: system dependencies of this project that dependent projects also need
 catkin_package(
-#  INCLUDE_DIRS include
-#  LIBRARIES rrt_planner
+ INCLUDE_DIRS include
+ LIBRARIES rrt_planner
 #  CATKIN_DEPENDS roscpp rospy
 #  DEPENDS system_lib
 )
@@ -115,9 +115,16 @@ catkin_package(
 ## Specify additional locations of header files
 ## Your package locations should be listed before other locations
 include_directories(
-# include
+  include
   ${catkin_INCLUDE_DIRS}
+  # ${YAML_CPP_INCLUDE_DIRS}
 )
+
+add_library(rrt_planner src/rrt_planner.cpp)
+target_link_libraries(rrt_planner yaml-cpp)
+
+add_executable(rrt_planner_node src/rrt_planner_node.cpp)
+target_link_libraries(rrt_planner_node ${catkin_LIBRARIES} rrt_planner)
 
 # target_link_libraries(${PROJECT_NAME} yaml-cpp)
 

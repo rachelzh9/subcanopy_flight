@@ -1,10 +1,8 @@
-/*=================================================================
- *
- * planner.c
- *
- *=================================================================*/
+/*
+	ROS-agnostic RRT planner
+*/
 
-#include "rrt_planner.h"
+#include <rrt_planner/rrt_planner.h>
 
 // RRT planner contructor
 RRTplanner::RRTplanner(
@@ -44,7 +42,7 @@ RRTplanner::RRTplanner(
 	
 }
 
-// Extend tree towards the sample node (RRT and RRT-Connect)
+// Extend tree towards the sample node
 int RRTplanner::extendTree(Tree* tree, double* q, int numofDOFs, const Map* map, const std::vector<int>* obstacle_ids)
 {
     int status = TRAPPED;
@@ -115,6 +113,7 @@ int RRTplanner::isAtGoal(double* q, double* qgoal, int numofDOFs)
     }
     return reached;
 }
+
 
 void RRTplanner::run(Tree* tree){
 
@@ -219,7 +218,6 @@ int main() {
 
 	double epsilon = 0.2;
 	double sample_resolution = 0.1;
-
 
 	if(!isValid(map, start_point[0], start_point[1], obstacle_ids)){
 		throw runtime_error("Invalid start configuration!\n");
