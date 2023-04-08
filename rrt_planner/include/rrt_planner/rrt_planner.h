@@ -1,21 +1,54 @@
-#include <vector>
-#include <array>
 #include <iostream>
-#include <math.h>
 #include <cstring>
+#include <math.h>
+#include <vector>
+
 #include "tree.h"
 #include "map.h"
-
-#define EPSILON 0.2
 
 #define TRAPPED 0
 #define ADVANCED 1
 #define REACHED 2
 
 using std::vector;
-using std::array;
 using std::cout;
 using std::endl;
+
+class RRTplanner{
+    public:
+        RRTplanner(Map* map,
+                    double* start_point,
+                    double* goal_point,
+                    int numofDOFs,
+                    std::vector<int>* obstacle_ids,
+                    double*** plan,
+                    int* planlength,
+                    double epsilon,
+                    double sample_resolution);
+
+        void run(Tree* tree);
+        Tree initTree();
+
+        double epsilon;
+        double sample_resolution;
+
+    private:
+        Map* map;
+        double* start_point;
+        double* goal_point;
+        int numofDOFs;
+        std::vector<int>* obstacle_ids;
+        double*** plan;
+        int* planlength;
+        int K;
+        int k;
+        double goal_bias;
+        bool target_found;
+
+        int extendTree(Tree* tree, double* q, int numofDOFs, const Map* map, const std::vector<int>* obstacle_ids);
+        int newConfig(double* q, double* q_near, double* q_new, int numofDOFs, const Map* map, const std::vector<int>* obstacle_ids);
+        int isAtGoal(double* q, double* qgoal, int numofDOFs);
+};
 
 bool isValid(const Map* map, double x, double y, const std::vector<int>* obstacle_ids)
 {
@@ -60,4 +93,14 @@ bool equalDoubleArrays(double* v1, double *v2, int size) {
         }
     }
     return true;
+}
+
+double distNorm(double* q1, double* q2, int numofDOFs)
+{
+    double dist = 0;
+	for(int i=0; i<numofDOFs; i++)
+	{
+		dist = dist + (q1[i]-q2[i]) * (q1[i]-q2[i]);
+	}
+	return sqrt(dist);
 }

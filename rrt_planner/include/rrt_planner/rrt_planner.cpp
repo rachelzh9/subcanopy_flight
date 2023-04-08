@@ -4,72 +4,48 @@
  *
  *=================================================================*/
 
-#include "planner.h"
+#include "rrt_planner.h"
 
-double distNorm(double* q1, double* q2, int numofDOFs)
+// RRT planner contructor
+RRTplanner::RRTplanner(
+			Map* map_,
+			double* start_point_,
+			double* goal_point_,
+            int numofDOFs_,
+			std::vector<int>* obstacle_ids_,
+            double*** plan_,
+            int* planlength_,
+			double epsilon_,
+			double sample_resolution_)
 {
-    double dist = 0;
-	for(int i=0; i<numofDOFs; i++)
-	{
-		dist = dist + (q1[i]-q2[i]) * (q1[i]-q2[i]);
-	}
-	return sqrt(dist);
-}
+	map = map_;
+	start_point = start_point_;
+	goal_point = goal_point_;
+	numofDOFs = numofDOFs_;
+	obstacle_ids = obstacle_ids_;
+	plan = plan_;
+	planlength = planlength_;
+	epsilon = epsilon_;
+	sample_resolution = sample_resolution_;
 
-int newConfig(double* q, double* q_near, double* q_new, int numofDOFs, const Map* map, const std::vector<int>* obstacle_ids) 
-{
-    // move by EPSILON towards q from q_near and return q_new
+	//no plan by default
+	*plan = NULL;
+	*planlength = 0;
 
-    double dist = 0;
-    int success = 0;
-    int i,j;
+	// Number of samples
+	K = 1000000;
+	k = 0;
 
-	// set distance as the sum of the squares of the differences calculated here
-	dist = distNorm(q, q_near, numofDOFs);
+	// Goal bias
+	goal_bias = 0.05;
 
-    int numofsamples = (int)(dist/(0.1));
-
-    double* tmp_point = (double*)malloc(numofDOFs*sizeof(double));
-
-    for (i = 1; i < numofsamples; i++)
-    {
-    	for(j = 0; j<numofDOFs; j++)
-    	{
-    		tmp_point[j] = q_near[j] + ((double)(i)/(numofsamples-1))*(q[j] - q_near[j]);
-    	}
-		double dist_temp = distNorm(tmp_point, q_near, numofDOFs);
-    	if(isValid(map, tmp_point[0], tmp_point[1], obstacle_ids) && dist_temp < EPSILON)
-    	{
-    		memcpy(q_new, tmp_point, numofDOFs*sizeof(double));
-            success = 1;
-    	}
-    	else
-    	{break;}
-    }
-
-    free(tmp_point);
-    return success;
-
-}
-
-int isAtGoal(double* q, double* qgoal, int numofDOFs)
-{
-    int reached = 0;
-    double distance = 0;
-    int i,j;
-    for (j = 0; j < numofDOFs; j++){
-        if(distance < fabs(q[j] - qgoal[j]))
-            distance = fabs(q[j] - qgoal[j]);
-    }
-    int numofsamples = (int)(distance/(0.1));
-    if(numofsamples < 2){
-        reached = 1;
-    }
-    return reached;
+	// target found flag
+	target_found = 0;
+	
 }
 
 // Extend tree towards the sample node (RRT and RRT-Connect)
-int extendTree(Tree* tree, double* q, int numofDOFs, const Map* map, const std::vector<int>* obstacle_ids)
+int RRTplanner::extendTree(Tree* tree, double* q, int numofDOFs, const Map* map, const std::vector<int>* obstacle_ids)
 {
     int status = TRAPPED;
     int q_near_id = tree->nearestNeighbour(q);
@@ -88,33 +64,61 @@ int extendTree(Tree* tree, double* q, int numofDOFs, const Map* map, const std::
     return status;
 }
 
-// RRT Planner
-static void RRTplanner(
-			Map* map,
-			double* start_point,
-			double* goal_point,
-            int numofDOFs,
-			std::vector<int>* obstacle_ids,
-            double*** plan,
-            int* planlength)
+int RRTplanner::newConfig(double* q, double* q_near, double* q_new, int numofDOFs, const Map* map, const std::vector<int>* obstacle_ids) 
 {
-	//no plan by default
-	*plan = NULL;
-	*planlength = 0;
+    // move by EPSILON towards q from q_near and return q_new
 
-	// Initialize tree structure with start node
-	Tree tree(numofDOFs, start_point);
+    double dist = 0;
+    int success = 0;
+    int i,j;
 
-	// Number of samples
-	int K = 1000000;
-	int k = 0;
+	// set distance as the sum of the squares of the differences calculated here
+	dist = distNorm(q, q_near, numofDOFs);
 
-	// Goal bias
-	double goal_bias = 0.05;
+    int numofsamples = (int)(dist/(sample_resolution));
 
-	// target found flag
-	bool target_found = 0;
+    double* tmp_point = (double*)malloc(numofDOFs*sizeof(double));
 
+    for (i = 1; i < numofsamples; i++)
+    {
+    	for(j = 0; j<numofDOFs; j++)
+    	{
+    		tmp_point[j] = q_near[j] + ((double)(i)/(numofsamples-1))*(q[j] - q_near[j]);
+    	}
+		double dist_temp = distNorm(tmp_point, q_near, numofDOFs);
+    	if(isValid(map, tmp_point[0], tmp_point[1], obstacle_ids) && dist_temp < epsilon)
+    	{
+    		memcpy(q_new, tmp_point, numofDOFs*sizeof(double));
+            success = 1;
+    	}
+    	else
+    	{break;}
+    }
+
+    free(tmp_point);
+    return success;
+
+}
+
+int RRTplanner::isAtGoal(double* q, double* qgoal, int numofDOFs)
+{
+    int reached = 0;
+    double distance = 0;
+    int i,j;
+    for (j = 0; j < numofDOFs; j++){
+        if(distance < fabs(q[j] - qgoal[j]))
+            distance = fabs(q[j] - qgoal[j]);
+    }
+    int numofsamples = (int)(distance/(sample_resolution));
+    if(numofsamples < 2){
+        reached = 1;
+    }
+    return reached;
+}
+
+void RRTplanner::run(Tree* tree){
+
+	// Run RRT algorithm
 	while(!target_found && k < K)
 	{
 		k++;
@@ -135,13 +139,13 @@ static void RRTplanner(
 		}
 		
 		// Extend the tree towards the sample node
-		if(extendTree(&tree, q_rand, numofDOFs, map, obstacle_ids) == TRAPPED)
+		if(extendTree(tree, q_rand, numofDOFs, map, obstacle_ids) == TRAPPED)
 		{
 			continue;
 		}
 
-		int q_new_id = tree.getNewNodeID();
-		double* q_new = tree.getNode(q_new_id);
+		int q_new_id = tree->getNewNodeID();
+		double* q_new = tree->getNode(q_new_id);
 
 		// Check if the new node is close to the goal
 		if (isAtGoal(q_new, goal_point, numofDOFs))
@@ -153,8 +157,8 @@ static void RRTplanner(
 			{
 				// we are very near to goal but not quite there
 				// so add the goal to the tree
-				int node_id = tree.addNode(goal_point);
-				tree.addEdge(node_id,q_new_id);
+				int node_id = tree->addNode(goal_point);
+				tree->addEdge(node_id,q_new_id);
 			}
 		}
 	}
@@ -162,13 +166,13 @@ static void RRTplanner(
 	// If target is found, construct and return the plan
 	if(target_found)
 	{
-		int q_new_id = tree.getNewNodeID();
-		double* q_new = tree.getNode(q_new_id);
+		int q_new_id = tree->getNewNodeID();
+		double* q_new = tree->getNode(q_new_id);
 		vector<int> path;
 		int next_id = q_new_id;
 		while (next_id != 0) {
 			path.insert(path.begin(), next_id);
-			next_id = tree.getParentID(next_id);
+			next_id = tree->getParentID(next_id);
 		}
 		path.insert(path.begin(), 0);
 		*planlength = path.size();
@@ -176,27 +180,23 @@ static void RRTplanner(
 		for(int i=0; i<path.size(); i++)
 		{
 			(*plan)[i] = (double*) malloc(numofDOFs*sizeof(double));
-			memcpy((*plan)[i], tree.getNode(path[i]), numofDOFs*sizeof(double));
+			memcpy((*plan)[i], tree->getNode(path[i]), numofDOFs*sizeof(double));
 		}
 	}
 	else
 	{
 		printf("Target not found\n");
-	}	
+	}
 
 }
 
-/** Your final solution will be graded by an grading script which will
- * send the default 6 arguments:
- *    map, numOfDOFs, commaSeparatedStartPos, commaSeparatedGoalPos, 
- *    whichPlanner, outputFilePath
- * An example run after compiling and getting the planner.out executable
- * >> ./planner.out map1.txt 5 1.57,0.78,1.57,0.78,1.57 0.392,2.35,3.14,2.82,4.71 0 output.txt
- * See the hw handout for full information.
- * If you modify this for testing (e.g. to try out different hyper-parameters),
- * make sure it can run with the original 6 commands.
- * Programs that do not will automatically get a 0.
- * */
+Tree RRTplanner::initTree()
+{
+	Tree tree(numofDOFs, start_point);
+	return tree;
+}
+
+
 int main() {
 
 	Map* map;
@@ -210,12 +210,16 @@ int main() {
 	numOfDOFs = 2;
 	start_point = (double*)malloc(numOfDOFs*sizeof(double));
 	goal_point = (double*)malloc(numOfDOFs*sizeof(double));
-	start_point[0] = -2.0;
-	start_point[1] = -3.0;
-	goal_point[0] = 9.0;
-	goal_point[1] = 7.36;
-	std::vector<int> ids_to_find = {0,1,2,3,4};
+	start_point[0] = 0.0;
+	start_point[1] = -2.5;
+	goal_point[0] = 0.0;
+	goal_point[1] = 9.0;
+	std::vector<int> ids_to_find = {0};
 	obstacle_ids = &ids_to_find;
+
+	double epsilon = 0.2;
+	double sample_resolution = 0.1;
+
 
 	if(!isValid(map, start_point[0], start_point[1], obstacle_ids)){
 		throw runtime_error("Invalid start configuration!\n");
@@ -231,7 +235,10 @@ int main() {
 	clock_t begin = clock();
 
 	// Call the planner
-	RRTplanner(map, start_point, goal_point, numOfDOFs, obstacle_ids, &plan, &planlength);
+	RRTplanner rrt(map, start_point, goal_point, numOfDOFs, obstacle_ids, &plan, &planlength, epsilon, sample_resolution);
+
+	Tree tree = rrt.initTree();
+	rrt.run(&tree);
 
 	// measure time
 	clock_t end = clock();

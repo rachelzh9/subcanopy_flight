@@ -5,13 +5,6 @@
 class Map
 {
 public:
-    struct Obstacle
-    {
-        double x;
-        double y;
-        double r;
-    };
-
     Map(const std::string& filename)
     {
         // Load the YAML file
@@ -41,6 +34,13 @@ public:
             obstacles_.push_back({x, y, r});
         }
     }
+
+    struct Obstacle
+    {
+        double x;
+        double y;
+        double r;
+    };
 
     int num_obstacles() const { return num_obstacles_; }
     double x_min() const { return x_min_; }
