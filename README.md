@@ -12,7 +12,7 @@ Launching quadrotor in an empty world with sample trajectory tracking
 ```
 roslaunch rpg_mpc follow_trajectory.launch
 ```
-Launching in empty world with GUI
+Launching in sample cylinder world with GUI
 ```
-roslaunch rpg_rotors_interface quadrotor_empty_world.launch use_mpc:=true
+roslaunch rpg_mpc subcanopy_flight.launch
 ```
