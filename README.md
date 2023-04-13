@@ -14,5 +14,5 @@ roslaunch rpg_mpc follow_trajectory.launch
 ```
 Launching in sample cylinder world with GUI
 ```
-roslaunch rpg_mpc subcanopy_flight
+roslaunch rpg_mpc subcanopy_flight.launch
 ```
