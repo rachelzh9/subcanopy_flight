@@ -1,0 +1,52 @@
+import yaml
+
+def create_world_file(yaml_file_path, world_file_path):
+    with open(yaml_file_path, 'r') as yaml_file:
+        data = yaml.safe_load(yaml_file)
+
+    world_file = open(world_file_path, 'w')
+    world_file.write('<?xml version="1.0"?>\n')
+    world_file.write('<sdf version="1.5">\n')
+    world_file.write('  <world name="default">\n')
+    world_file.write('    <include>\n')
+    world_file.write('      <uri>model://ground_plane</uri>\n')
+    world_file.write('    </include>\n')
+    world_file.write('    <include>\n')
+    world_file.write('      <uri>model://sun</uri>\n')
+    world_file.write('    </include>\n')
+
+    for i in range(data['num_obstacles']):
+        world_file.write('    <model name="obstacle{}">\n'.format(i))
+        world_file.write('      <pose>{} {} {} 0 0 0</pose>\n'.format(data['obstacles'][i]['x'], data['obstacles'][i]['y'], 0))
+        world_file.write('      <static>true</static>\n')
+        world_file.write('      <link name="link">\n')
+        world_file.write('        <collision name="collision">\n')
+        world_file.write('          <geometry>\n')
+        world_file.write('            <cylinder>\n')
+        world_file.write('              <radius>{}</radius>\n'.format(data['obstacles'][i]['r']))
+        world_file.write('              <length>5</length>\n')
+        world_file.write('            </cylinder>\n')
+        world_file.write('          </geometry>\n')
+        world_file.write('        </collision>\n')
+        world_file.write('        <visual name="visual">\n')
+        world_file.write('          <geometry>\n')
+        world_file.write('            <cylinder>\n')
+        world_file.write('              <radius>{}</radius>\n'.format(data['obstacles'][i]['r']))
+        world_file.write('              <length>5</length>\n')
+        world_file.write('            </cylinder>\n')
+        world_file.write('          </geometry>\n')
+        world_file.write('          <material>\n')
+        world_file.write('            <script>\n')
+        world_file.write('              <uri>file://media/materials/scripts/gazebo.material</uri>\n')
+        world_file.write('              <name>Gazebo/White</name>\n')
+        world_file.write('            </script>\n')
+        world_file.write('          </material>\n')
+        world_file.write('        </visual>\n')
+        world_file.write('      </link>\n')
+        world_file.write('    </model>\n')
+
+    world_file.write('  </world>\n')
+    world_file.write('</sdf>\n')
+    world_file.close()
+
+create_world_file('../config/map.yaml', '../worlds/cylinder_gen.world')
