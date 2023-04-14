@@ -11,6 +11,7 @@ find_package(catkin REQUIRED COMPONENTS
   roscpp
   rospy
   nav_msgs
+  maps
 )
 
 ## System dependencies are found with CMake's conventions
@@ -105,7 +106,7 @@ find_package(catkin REQUIRED COMPONENTS
 catkin_package(
  INCLUDE_DIRS include
  LIBRARIES rrt_planner
-#  CATKIN_DEPENDS roscpp rospy
+ CATKIN_DEPENDS roscpp rospy nav_msgs maps
 #  DEPENDS system_lib
 )
 
@@ -122,7 +123,6 @@ include_directories(
 )
 
 add_library(rrt_planner src/rrt_planner.cpp)
-target_link_libraries(rrt_planner yaml-cpp)
 
 add_executable(rrt_planner_node src/rrt_planner_node.cpp)
 target_link_libraries(rrt_planner_node ${catkin_LIBRARIES} rrt_planner)

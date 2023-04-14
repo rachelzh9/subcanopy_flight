@@ -14,7 +14,7 @@ int main(int argc, char** argv)
     // Get parameters
     // TODO: Take path from ros params and not hardcode
     // Currently path is hardcoded coz yaml-cpp complains when loading it from ros params
-    std::string map_path = pnh.param<std::string>("map_path", "/home/devansh/airlab/mpc_ws/src/subcanopy_flight/rrt_planner/config/map.yaml");
+    std::string map_path = pnh.param<std::string>("map_path", "/home/devansh/airlab/mpc_ws/src/subcanopy_flight/maps/config/map.yaml");
     int numOfDOFs = pnh.param<int>("numOfDOFs", 2);
     double epsilon = pnh.param<double>("epsilon", 0.2);
     double sample_resolution = pnh.param<double>("sample_resolution", 0.1);

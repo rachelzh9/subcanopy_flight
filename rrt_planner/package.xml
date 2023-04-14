@@ -56,9 +56,7 @@
   <exec_depend>roscpp</exec_depend>
   <exec_depend>rospy</exec_depend>
   <depend>nav_msgs</depend>
-  <build_depend>yaml-cpp</build_depend>
-  <build_export_depend>yaml-cpp</build_export_depend>
-  <exec_depend>yaml-cpp</exec_depend>
+  <depend>maps</depend>
 
 
   <!-- The export tag contains other, unspecified, tags -->

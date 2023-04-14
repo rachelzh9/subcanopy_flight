@@ -101,8 +101,8 @@ find_package(catkin REQUIRED COMPONENTS
 ## CATKIN_DEPENDS: catkin_packages dependent projects also need
 ## DEPENDS: system dependencies of this project that dependent projects also need
 catkin_package(
-#  INCLUDE_DIRS include
-#  LIBRARIES maps
+  INCLUDE_DIRS include include/${PROJECT_NAME}
+  LIBRARIES map_parser
 #  CATKIN_DEPENDS rospy
 #  DEPENDS system_lib
 )
@@ -114,9 +114,13 @@ catkin_package(
 ## Specify additional locations of header files
 ## Your package locations should be listed before other locations
 include_directories(
-# include
+  include
+  include/${PROJECT_NAME}
   ${catkin_INCLUDE_DIRS}
 )
+
+add_library(map_parser src/map_parser.cpp)
+target_link_libraries(map_parser yaml-cpp)
 
 ## Declare a C++ library
 # add_library(${PROJECT_NAME}
