@@ -4,7 +4,7 @@
 #include <vector>
 
 #include "tree.h"
-#include "map_parser.h"
+#include <maps/map_parser.h>
 
 #define TRAPPED 0
 #define ADVANCED 1
