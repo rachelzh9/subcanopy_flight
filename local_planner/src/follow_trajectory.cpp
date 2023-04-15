@@ -111,7 +111,7 @@ public:
         // Convert nav path to waypoints
         int planlength = planner_call.response.plan.poses.size();
         std::vector<Eigen::Vector3d> waypoints;
-        for (int i = 0; i < planlength/10; i++)
+        for (int i = 0; i < planlength; i++)
         {
             Eigen::Vector3d waypoint;
             waypoint << planner_call.response.plan.poses[i].pose.position.x, planner_call.response.plan.poses[i].pose.position.y, start_state.position(2);
