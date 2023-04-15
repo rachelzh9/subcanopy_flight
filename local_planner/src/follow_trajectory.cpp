@@ -1,5 +1,4 @@
 #include <vector>
-
 #include <autopilot/autopilot_helper.h>
 #include <quadrotor_msgs/AutopilotFeedback.h>
 #include <ros/ros.h>
@@ -11,6 +10,8 @@
 #include <trajectory_generation_helper/heading_trajectory_helper.h>
 #include <trajectory_generation_helper/polynomial_trajectory_helper.h>
 #include <Eigen/Dense>
+#include <rrt_planner/rrt_planner.h>
+#include <rrt_planner/GetPlan.h>
 
 class TrajectoryGenerator
 {
@@ -20,6 +21,8 @@ public:
     ros::Publisher arm_pub_;
 
     ros::Subscriber autopilot_feedback_sub_;
+
+    ros::ServiceClient planner_client;
 
     autopilot_helper::AutoPilotHelper autopilot_helper_;
     bool executing_trajectory_;
@@ -41,14 +44,14 @@ public:
           max_thrust_direction_error_(0.0)
     {
 
-        arm_pub_ = nh_.advertise<std_msgs::Bool>("bridge/arm", 1);
+        arm_pub_ = nh_.advertise<std_msgs::Bool>("hummingbird/bridge/arm", 1);
+        planner_client = nh_.serviceClient<rrt_planner::GetPlan>("rrt_planner_server");
     }
 
     ~TrajectoryGenerator() {}
 
     void run()
     {
-        ros::Duration(5.0).sleep();
         ROS_INFO("Running trajectory node");
 
         ros::Rate command_rate(kExecLoopRate_);
@@ -84,57 +87,65 @@ public:
         start_state.heading = 0.0;
 
         ROS_INFO("Starting trajectory control");
-        ros::Duration(3.0).sleep();
 
-        ///////////////
-        // Check trajectory control
-        ///////////////
+        // Call RRT planner service
+        rrt_planner::GetPlan planner_call = rrt_planner::GetPlan();
+        planner_call.request.start.pose.position.x = start_state.position(0);
+        planner_call.request.start.pose.position.y = start_state.position(1);
 
-        // Generate trajectories and send them as complete trajectories
-        // One polynomial to enter a ring and a ring to check execution of
-        // consecutive trajectories
+        // TODO: get goal from somewhere
+        planner_call.request.goal.pose.position.x = 7.0;
+        planner_call.request.goal.pose.position.y = 5.0;
 
-        // Ring trajectory with enter segment
-        std::vector<Eigen::Vector3d>
-            way_points;
-        way_points.push_back(Eigen::Vector3d(-0.5, 0.0, 1.5));
-        way_points.push_back(Eigen::Vector3d(1.5, -1.5, 0.6));
-        way_points.push_back(Eigen::Vector3d(3.5, 0.0, 2.0));
-        way_points.push_back(Eigen::Vector3d(1.5, 2.0, 0.6));
+        // Send Obstacle IDs to avoid. Expects a int16[] array
+        std::vector<int16_t> obstacles = {0, 1, 2, 3};
+        planner_call.request.obstacle_ids.data = obstacles;
 
-        Eigen::VectorXd initial_ring_segment_times =
-            Eigen::VectorXd::Ones(int(way_points.size()));
+        ros::service::waitForService("rrt_planner_server");
+        if (!planner_client.call(planner_call))
+        {
+            ROS_ERROR("Failed to call planner service");
+            return;
+        }
+
+        // Convert nav path to waypoints
+        int planlength = planner_call.response.plan.poses.size();
+        std::vector<Eigen::Vector3d> waypoints;
+        for (int i = 0; i < planlength/10; i++)
+        {
+            Eigen::Vector3d waypoint;
+            waypoint << planner_call.response.plan.poses[i].pose.position.x, planner_call.response.plan.poses[i].pose.position.y, start_state.position(2);
+            waypoints.push_back(waypoint);
+        }
+
+        // End state
+        quadrotor_common::TrajectoryPoint end_state;
+        end_state.position = waypoints.back();
+        end_state.heading = 0.0;
+
+        Eigen::VectorXd initial_segment_times =
+            Eigen::VectorXd::Ones(int(waypoints.size())+1);
         polynomial_trajectories::PolynomialTrajectorySettings
-            ring_trajectory_settings;
-        ring_trajectory_settings.continuity_order = 4;
+            trajectory_settings;
+        trajectory_settings.continuity_order = 4;
         Eigen::VectorXd minimization_weights(5);
         minimization_weights << 0.0, 1.0, 1.0, 1.0, 1.0;
-        ring_trajectory_settings.minimization_weights = minimization_weights;
-        ring_trajectory_settings.polynomial_order = 11;
-        ring_trajectory_settings.way_points = way_points;
+        trajectory_settings.minimization_weights = minimization_weights;
+        trajectory_settings.polynomial_order = 11;
+        trajectory_settings.way_points = waypoints;
 
-        quadrotor_common::Trajectory ring_traj = trajectory_generation_helper::
-            polynomials::generateMinimumSnapRingTrajectoryWithSegmentRefinement(
-                initial_ring_segment_times, ring_trajectory_settings, max_vel,
+        quadrotor_common::Trajectory traj = trajectory_generation_helper::
+            polynomials::generateMinimumSnapTrajectory(
+                initial_segment_times, start_state, end_state, trajectory_settings, max_vel,
                 max_thrust, max_roll_pitch_rate, kExecLoopRate_);
 
-        polynomial_trajectories::PolynomialTrajectorySettings
-            enter_trajectory_settings = ring_trajectory_settings;
-        enter_trajectory_settings.way_points.clear();
+        // print trajectory before sending
+        // traj.points is a list
+        for(auto point : traj.points){
+            ROS_INFO("Trajectory point: %f, %f, %f", point.position(0), point.position(1), point.position(2));
+        }
 
-        quadrotor_common::Trajectory enter_traj =
-            trajectory_generation_helper::polynomials::generateMinimumSnapTrajectory(
-                Eigen::VectorXd::Ones(1), start_state, ring_traj.points.front(),
-                enter_trajectory_settings, 1.03 * max_vel, 1.03 * max_thrust,
-                max_roll_pitch_rate, kExecLoopRate_);
-
-        trajectory_generation_helper::heading::addConstantHeadingRate(
-            start_state.heading, 0.0, &enter_traj);
-        trajectory_generation_helper::heading::addConstantHeadingRate(0.0, M_PI,
-                                                                      &ring_traj);
-
-        autopilot_helper_.sendTrajectory(enter_traj);
-        autopilot_helper_.sendTrajectory(ring_traj);
+        autopilot_helper_.sendTrajectory(traj);
 
         // Check if autopilot goes to trajectory control state
         autopilot_helper_.waitForSpecificAutopilotState(autopilot::States::TRAJECTORY_CONTROL, 5.0, kExecLoopRate_);

@@ -1,0 +1,16 @@
+<launch>
+  <arg name="quad_name" default="hummingbird"/>
+
+  <!-- <include file="$(find rpg_rotors_interface)/launch/quadrotor_empty_world.launch">
+    <arg name="quad_name" value="$(arg quad_name)"/>
+    <arg name="enable_command_feedthrough" value="True"/>
+    <arg name="use_mpc" value="True"/>
+  </include> -->
+
+  <!-- <group ns="$(arg quad_name)" > -->
+
+  <node pkg="local_planner" type="follow_trajectory" name="follow_trajectory" output="screen" />
+
+  <!-- </group> -->
+
+</launch>
