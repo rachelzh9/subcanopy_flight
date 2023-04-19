@@ -1,7 +1,7 @@
 #include <ros/ros.h>
 #include <nav_msgs/Path.h>
 #include <rrt_planner/rrt_planner.h>
-#include <rrt_planner/GetPlan.h>
+#include <rrt_planner/GetRRTPlan.h>
 
 #include "ros/ros.h"
 
@@ -11,7 +11,7 @@ int numOfDOFs;
 double epsilon;
 double sample_resolution;
 
-bool rrt_planner_callback(rrt_planner::GetPlan::Request  &req, rrt_planner::GetPlan::Response &res)
+bool rrt_planner_callback(rrt_planner::GetRRTPlan::Request  &req, rrt_planner::GetRRTPlan::Response &res)
 {
     // Start and goal points
     double* start_point = (double*)malloc(numOfDOFs*sizeof(double));
