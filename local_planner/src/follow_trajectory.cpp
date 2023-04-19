@@ -11,7 +11,7 @@
 #include <trajectory_generation_helper/polynomial_trajectory_helper.h>
 #include <Eigen/Dense>
 #include <rrt_planner/rrt_planner.h>
-#include <rrt_planner/GetPlan.h>
+#include <rrt_planner/GetRRTPlan.h>
 
 class TrajectoryGenerator
 {
@@ -45,7 +45,7 @@ public:
     {
 
         arm_pub_ = nh_.advertise<std_msgs::Bool>("hummingbird/bridge/arm", 1);
-        planner_client = nh_.serviceClient<rrt_planner::GetPlan>("rrt_planner_server");
+        planner_client = nh_.serviceClient<rrt_planner::GetRRTPlan>("rrt_planner_server");
     }
 
     ~TrajectoryGenerator() {}
@@ -89,7 +89,7 @@ public:
         ROS_INFO("Starting trajectory control");
 
         // Call RRT planner service
-        rrt_planner::GetPlan planner_call = rrt_planner::GetPlan();
+        rrt_planner::GetRRTPlan planner_call = rrt_planner::GetRRTPlan();
         planner_call.request.start.pose.position.x = start_state.position(0);
         planner_call.request.start.pose.position.y = start_state.position(1);
 
