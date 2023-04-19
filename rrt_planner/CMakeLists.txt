@@ -132,6 +132,7 @@ add_executable(rrt_planner_node src/rrt_planner_node.cpp)
 target_link_libraries(rrt_planner_node ${catkin_LIBRARIES} rrt_planner)
 
 add_executable(rrt_planner_server src/rrt_planner_server.cpp)
+add_dependencies(rrt_planner_server ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 target_link_libraries(rrt_planner_server ${catkin_LIBRARIES} rrt_planner)
 
 # target_link_libraries(${PROJECT_NAME} yaml-cpp)

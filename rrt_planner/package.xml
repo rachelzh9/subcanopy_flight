@@ -58,7 +58,7 @@
   <depend>nav_msgs</depend>
   <depend>geometry_msgs</depend>
   <depend>std_msgs</depend>
-  <build_depend>message_generation</build_depend>
+  <buildtool_depend>message_generation</buildtool_depend>
   <exec_depend>message_runtime</exec_depend>
   <depend>maps</depend>
 
