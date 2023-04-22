@@ -76,7 +76,7 @@ bool rrt_planner_callback(rrt_planner::GetRRTPlan::Request  &req, rrt_planner::G
     // Publish the plan
     nav_msgs::Path path;
     path.header.stamp = ros::Time::now();
-    path.header.frame_id = "map";
+    path.header.frame_id = "world";
     for (int i = 0; i < planlength; i++)
     {
         geometry_msgs::PoseStamped pose;

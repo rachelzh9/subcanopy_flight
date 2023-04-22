@@ -16,3 +16,8 @@ Launching in sample cylinder world with GUI
 ```
 roslaunch rpg_mpc subcanopy_flight.launch
 ```
+Launching full stack
+```
+roslaunch local_planner quad_launch.launch
+roslaunch local_planner local_planner.launch
+```
