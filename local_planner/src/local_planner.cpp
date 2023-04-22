@@ -56,7 +56,9 @@ public:
           sum_position_error_squared_(0.0),
           max_position_error_(0.0),
           sum_thrust_direction_error_squared_(0.0),
-          max_thrust_direction_error_(0.0)
+          max_thrust_direction_error_(0.0),
+          goal_received_(false),
+          goal_reached_(false)
     {
 
         arm_pub_ = nh_.advertise<std_msgs::Bool>("bridge/arm", 1);
@@ -64,9 +66,6 @@ public:
         snap_traj_pub_ = nh_.advertise<nav_msgs::Path>("snap_trajectory", 1);
         rrt_traj_pub_ = nh_.advertise<nav_msgs::Path>("rrt_trajectory", 1);
         planner_client = nh_.serviceClient<rrt_planner::GetRRTPlan>("/rrt_planner_server");  // planner is in global namespace
-
-        goal_received_ = false;
-        goal_reached_ = false;
 
         trajectory_settings.continuity_order = 4;
         trajectory_settings.polynomial_order = 11;
