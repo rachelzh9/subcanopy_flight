@@ -128,8 +128,8 @@ include_directories(
 #   src/${PROJECT_NAME}/local_planner.cpp
 # )
 
-add_executable(follow_trajectory src/follow_trajectory.cpp)
-target_link_libraries(follow_trajectory ${catkin_LIBRARIES})
+add_executable(local_planner src/local_planner.cpp)
+target_link_libraries(local_planner ${catkin_LIBRARIES})
 
 ## Add cmake target dependencies of the library
 ## as an example, code may need to be generated before libraries
