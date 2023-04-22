@@ -24,8 +24,15 @@ bool rrt_planner_callback(rrt_planner::GetRRTPlan::Request  &req, rrt_planner::G
     // Obstacle ids of interest
     // req.obstacle_ids.data is a int16[] array
     std::vector<int> ids_to_find;
-    for (int i = 0; i < req.obstacle_ids.data.size(); i++)
-        ids_to_find.push_back(req.obstacle_ids.data[i]);
+    if (req.obstacle_ids.data.size() == 0){
+        // If no obstacle ids are specified, then we avoid all obstacles
+        for (int i = 0; i < env_map->num_obstacles(); i++)
+            ids_to_find.push_back(i);
+    }
+    else{
+        for (int i = 0; i < req.obstacle_ids.data.size(); i++)
+            ids_to_find.push_back(req.obstacle_ids.data[i]);
+    }
     std::vector<int>* obstacle_ids;
     obstacle_ids = &ids_to_find;
 
@@ -91,7 +98,7 @@ int main(int argc, char **argv)
 
     map_path = pnh.param<std::string>("map_path", "/home/devansh/airlab/mpc_ws/src/subcanopy_flight/maps/config/map.yaml");
     numOfDOFs = pnh.param<int>("numOfDOFs", 2);
-    epsilon = pnh.param<double>("epsilon", 0.2);
+    epsilon = pnh.param<double>("epsilon", 1.0);
     sample_resolution = pnh.param<double>("sample_resolution", 0.1);
 
     // Load map
