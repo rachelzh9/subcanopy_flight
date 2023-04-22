@@ -1,0 +1,8 @@
+<launch>
+  <arg name="quad_name" default="hummingbird"/>
+
+  <group ns="$(arg quad_name)" >
+    <node pkg="local_planner" type="follow_trajectory" name="follow_trajectory" output="screen" />
+  </group>
+
+</launch>
