@@ -14,6 +14,9 @@
 #include <rrt_planner/rrt_planner.h>
 #include <rrt_planner/GetRRTPlan.h>
 
+#define WAYPOINT_HORIZON 7
+#define REACH_WAYPOINT_THRESHOLD 0.1
+
 class LocalPlanner
 {
 public:
@@ -115,27 +118,67 @@ public:
         return planner_call.response.plan;
     }
 
+    bool reachedWaypoint(Eigen::Vector3d waypoint)
+    {
+        Eigen::Vector3d current_position = autopilot_helper_.getCurrentReferenceState().position;
+        double distance = (current_position - waypoint).norm();
+        if (distance < REACH_WAYPOINT_THRESHOLD)
+            return true;
+        return false;
+    }
+
     void executeTrajectory(quadrotor_common::TrajectoryPoint start_state, nav_msgs::Path plan)
     {
         std::vector<Eigen::Vector3d> waypoints = pathToWaypoints(start_state, plan);
 
-        Eigen::VectorXd initial_segment_times = Eigen::VectorXd::Ones(int(waypoints.size())+1);
-        trajectory_settings.way_points = waypoints;
-
-        quadrotor_common::TrajectoryPoint end_state;
-        end_state.position = waypoints.back();
-        end_state.heading = 0.0;
-
         Eigen::VectorXd minimization_weights(5);
         minimization_weights << 0.0, 1.0, 1.0, 1.0, 1.0;
         trajectory_settings.minimization_weights = minimization_weights;
+
+        // we want to loop through the waypoints and generate a trajectory for 3 waypoints at a time
+        for(int i = 0; i < waypoints.size()-WAYPOINT_HORIZON; i++){
+
+            std::vector<Eigen::Vector3d> waypoints_subset;
+            waypoints_subset.assign(waypoints.begin() + i, 
+                        (waypoints.begin()+i+WAYPOINT_HORIZON > waypoints.end()) ? waypoints.end() : waypoints.begin()+i+WAYPOINT_HORIZON );
+
+            start_state.position = autopilot_helper_.getCurrentReferenceState().position;
+            start_state.heading = autopilot_helper_.getCurrentReferenceState().heading;
+
+            quadrotor_common::TrajectoryPoint end_state;
+            end_state.position = waypoints_subset.back();
+            end_state.heading = 0.0;
+            
+            Eigen::VectorXd initial_segment_times = Eigen::VectorXd::Ones(int(waypoints_subset.size())+1);
+            trajectory_settings.way_points = waypoints_subset;
+
+            quadrotor_common::Trajectory traj = trajectory_generation_helper::
+                polynomials::generateMinimumSnapTrajectory(
+                    initial_segment_times, start_state, end_state, trajectory_settings, max_vel,
+                    max_thrust, max_roll_pitch_rate, kExecLoopRate_);
+            
+            autopilot_helper_.sendTrajectory(traj);
+
+            // wait till we reach the last waypoint
+            while(!reachedWaypoint(waypoints_subset.back())){
+                ros::spinOnce();
+            }
+        }
+
+        // quadrotor_common::TrajectoryPoint end_state;
+        // end_state.position = waypoints.back();
+        // end_state.heading = 0.0;
+
+        // Eigen::VectorXd minimization_weights(5);
+        // minimization_weights << 0.0, 1.0, 1.0, 1.0, 1.0;
+        // trajectory_settings.minimization_weights = minimization_weights;
         
-        quadrotor_common::Trajectory traj = trajectory_generation_helper::
-            polynomials::generateMinimumSnapTrajectory(
-                initial_segment_times, start_state, end_state, trajectory_settings, max_vel,
-                max_thrust, max_roll_pitch_rate, kExecLoopRate_);
+        // quadrotor_common::Trajectory traj = trajectory_generation_helper::
+        //     polynomials::generateMinimumSnapTrajectory(
+        //         initial_segment_times, start_state, end_state, trajectory_settings, max_vel,
+        //         max_thrust, max_roll_pitch_rate, kExecLoopRate_);
         
-        autopilot_helper_.sendTrajectory(traj);
+        // autopilot_helper_.sendTrajectory(traj);
 
         goal_reached_ = true;
 
