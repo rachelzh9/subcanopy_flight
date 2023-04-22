@@ -2,6 +2,7 @@
 #include <autopilot/autopilot_helper.h>
 #include <quadrotor_msgs/AutopilotFeedback.h>
 #include <ros/ros.h>
+#include <nav_msgs/Path.h>
 #include <autopilot/autopilot_states.h>
 #include <polynomial_trajectories/polynomial_trajectory_settings.h>
 #include <quadrotor_common/control_command.h>
@@ -20,6 +21,8 @@ public:
     ros::NodeHandle nh_;
 
     ros::Publisher arm_pub_;
+    ros::Publisher snap_traj_pub_;
+    ros::Publisher rrt_traj_pub_;
 
     ros::Subscriber goal_sub_;
 
@@ -55,6 +58,8 @@ public:
 
         arm_pub_ = nh_.advertise<std_msgs::Bool>("bridge/arm", 1);
         goal_sub_ = nh_.subscribe("/move_base_simple/goal", 1, &LocalPlanner::goalCallback, this);  // goal is in global namespace
+        snap_traj_pub_ = nh_.advertise<nav_msgs::Path>("snap_trajectory", 1);
+        rrt_traj_pub_ = nh_.advertise<nav_msgs::Path>("rrt_trajectory", 1);
         planner_client = nh_.serviceClient<rrt_planner::GetRRTPlan>("/rrt_planner_server");  // planner is in global namespace
 
         goal_received_ = false;
@@ -72,6 +77,7 @@ public:
         std_msgs::Bool arm_msg;
         arm_msg.data = true;
         arm_pub_.publish(arm_msg);
+        ros::Duration(1.0).sleep();
 
         // Takeoff
         autopilot_helper_.sendStart();
@@ -136,6 +142,7 @@ public:
                 max_thrust, max_roll_pitch_rate, kExecLoopRate_);
         
         autopilot_helper_.sendTrajectory(traj);
+        minSnapTrajPublisher(traj);
 
         goal_reached_ = true;
 
@@ -153,6 +160,7 @@ public:
         }
         return waypoints;
     }
+        
 
     void run()
     {
@@ -172,6 +180,7 @@ public:
 
             ROS_INFO("Executing trajectory");
             nav_msgs::Path plan = getPlan(start_state, goal_pose_);
+            rrt_traj_pub_.publish(plan);
             executeTrajectory(start_state, plan);
 
             autopilot_helper_.waitForSpecificAutopilotState(autopilot::States::TRAJECTORY_CONTROL, 5.0, kExecLoopRate_);
@@ -194,6 +203,20 @@ public:
         // autopilot_helper_.waitForSpecificAutopilotState(autopilot::States::OFF, 10.0, kExecLoopRate_);
 
         // autopilot_helper_.sendOff();
+    }
+
+    void minSnapTrajPublisher(quadrotor_common::Trajectory& traj) {
+        nav_msgs::Path path;
+        for(auto point : traj.points){
+            path.header.frame_id = "world";
+            path.header.stamp = ros::Time::now();
+            geometry_msgs::PoseStamped pose;
+            pose.pose.position.x = point.position(0);
+            pose.pose.position.y = point.position(1);
+            pose.pose.position.z = point.position(2);
+            path.poses.push_back(pose);
+        }
+        snap_traj_pub_.publish(path);
     }
 };
 
