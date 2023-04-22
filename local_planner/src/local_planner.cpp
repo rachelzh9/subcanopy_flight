@@ -13,7 +13,7 @@
 #include <rrt_planner/rrt_planner.h>
 #include <rrt_planner/GetRRTPlan.h>
 
-class TrajectoryGenerator
+class LocalPlanner
 {
 public:
     ros::NodeHandle nh_;
@@ -36,7 +36,7 @@ public:
     // Constants
     static constexpr double kExecLoopRate_ = 50.0;
 
-    TrajectoryGenerator()
+    LocalPlanner()
         : executing_trajectory_(false),
           sum_position_error_squared_(0.0),
           max_position_error_(0.0),
@@ -44,11 +44,11 @@ public:
           max_thrust_direction_error_(0.0)
     {
 
-        arm_pub_ = nh_.advertise<std_msgs::Bool>("hummingbird/bridge/arm", 1);
-        planner_client = nh_.serviceClient<rrt_planner::GetRRTPlan>("rrt_planner_server");
+        arm_pub_ = nh_.advertise<std_msgs::Bool>("bridge/arm", 1);
+        planner_client = nh_.serviceClient<rrt_planner::GetRRTPlan>("/rrt_planner_server");  // planner is in global namespace
     }
 
-    ~TrajectoryGenerator() {}
+    ~LocalPlanner() {}
 
     void run()
     {
@@ -98,10 +98,10 @@ public:
         planner_call.request.goal.pose.position.y = 5.0;
 
         // Send Obstacle IDs to avoid. Expects a int16[] array
-        std::vector<int16_t> obstacles = {0, 1, 2, 3};
+        std::vector<int16_t> obstacles = {};
         planner_call.request.obstacle_ids.data = obstacles;
 
-        ros::service::waitForService("rrt_planner_server");
+        ros::service::waitForService("/rrt_planner_server");
         if (!planner_client.call(planner_call))
         {
             ROS_ERROR("Failed to call planner service");
@@ -174,9 +174,9 @@ public:
 int main(int argc, char **argv)
 {
 
-    ros::init(argc, argv, "follow_trajectory");
-    TrajectoryGenerator tg;
-    tg.run();
+    ros::init(argc, argv, "local_planner");
+    LocalPlanner planner;
+    planner.run();
     ros::spin();
     return 0;
 }
