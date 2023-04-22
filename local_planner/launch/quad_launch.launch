@@ -47,5 +47,7 @@
     <param name="obs_config" value="$(arg obs_config)"/>
     <param name="detection_radius" value="$(arg detection_radius)"/>
   </node>
+
+  <node type="rviz" name="rviz" pkg="rviz" args="-d $(find rpg_mpc)/rviz/subcanopy_flight.rviz" />
   
 </launch>
