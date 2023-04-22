@@ -1,6 +1,6 @@
 <launch>
   <arg name="quad_name" default="hummingbird"/>
-  <arg name="obs_config" default="$(find maps)/config/map.yaml"/>
+  <arg name="obs_config" default="$(find maps)/config/cylinder_gen.yaml"/>
 
   <arg name="mav_name" default="$(arg quad_name)"/>
   <arg name="model" value="$(find rotors_description)/urdf/mav_generic_odometry_sensor.gazebo"/>

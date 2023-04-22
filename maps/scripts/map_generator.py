@@ -78,4 +78,4 @@ def create_world_file(yaml_file_path, world_file_path):
     world_file.write('</sdf>\n')
     world_file.close()
 
-create_world_file('../config/map.yaml', '../worlds/cylinder_gen.world')
+create_world_file('../config/cylinder_gen.yaml', '../worlds/cylinder_gen.world')

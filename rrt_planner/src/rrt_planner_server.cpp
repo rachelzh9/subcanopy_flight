@@ -96,7 +96,7 @@ int main(int argc, char **argv)
     ros::NodeHandle nh;
     ros::NodeHandle pnh("~");
 
-    map_path = pnh.param<std::string>("map_path", "/home/devansh/airlab/mpc_ws/src/subcanopy_flight/maps/config/map.yaml");
+    map_path = pnh.param<std::string>("map_path", "/home/rachelzheng/ocrl_ws/src/subcanopy_flight/maps/config/cylinder_gen.yaml");
     numOfDOFs = pnh.param<int>("numOfDOFs", 2);
     epsilon = pnh.param<double>("epsilon", 1.0);
     sample_resolution = pnh.param<double>("sample_resolution", 0.1);
