@@ -1,6 +1,6 @@
 <launch>
   <arg name="quad_name" default="hummingbird"/>
-  <arg name="obs_config" default="cylinder_gen.yaml"/>
+  <arg name="obs_config" default="dense_forest.yaml"/>
 
   <node pkg="rrt_planner" type="rrt_planner_server" name="rrt_planner_server" output="screen"> 
     <param name="map_path" value="$(find maps)/config/$(arg obs_config)"/>
