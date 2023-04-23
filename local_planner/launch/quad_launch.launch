@@ -1,10 +1,10 @@
 <launch>
   <arg name="quad_name" default="hummingbird"/>
-  <arg name="obs_config" default="$(find maps)/config/cylinder_gen.yaml"/>
+  <arg name="obs_config" default="$(find maps)/config/dense_forest.yaml"/>
 
   <arg name="mav_name" default="$(arg quad_name)"/>
   <arg name="model" value="$(find rotors_description)/urdf/mav_generic_odometry_sensor.gazebo"/>
-  <arg name="world_name" default="$(find maps)/worlds/cylinder_gen.world"/>
+  <arg name="world_name" default="$(find maps)/worlds/dense_forest.world"/>
 
   <arg name="x_init" default="0"/>
   <arg name="y_init" default="0"/>
