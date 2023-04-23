@@ -166,6 +166,10 @@ public:
             quadrotor_common::TrajectoryPoint end_state;
             end_state.position = waypoints_subset.back();
             end_state.heading = 0.0;
+
+            // remove start and end states from waypoints_subset
+            waypoints_subset.erase(waypoints_subset.begin());
+            waypoints_subset.pop_back();
             
             Eigen::VectorXd initial_segment_times = Eigen::VectorXd::Ones(int(waypoints_subset.size())+1);
             trajectory_settings.way_points.clear();
