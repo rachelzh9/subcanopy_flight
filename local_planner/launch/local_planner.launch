@@ -9,6 +9,7 @@
   </node>
 
   <group ns="$(arg quad_name)" >
+    <rosparam file="$(find local_planner)/config/local_planner.yaml" />
     <node pkg="local_planner" type="local_planner" name="local_planner" output="screen" />
   </group>
 

@@ -16,7 +16,7 @@
 #include <rrt_planner/GetRRTPlan.h>
 
 #define WAYPOINT_HORIZON 5
-#define REACH_WAYPOINT_THRESHOLD 0.2
+#define REACH_WAYPOINT_RADIUS 0.2
 
 class LocalPlanner
 {
@@ -47,7 +47,7 @@ public:
     double max_thrust_direction_error_;
 
     int waypoint_horizon_;
-    double reach_waypoint_threshold_;
+    double reach_waypoint_radius_;
 
     const double max_vel = 2.0;
     const double max_thrust = 15.0;
@@ -71,7 +71,7 @@ public:
         planner_client = nh_.serviceClient<rrt_planner::GetRRTPlan>("/rrt_planner_server");  // planner is in global namespace
 
         waypoint_horizon_ = nh_.param<int>("waypoint_horizon", WAYPOINT_HORIZON);
-        reach_waypoint_threshold_ = nh_.param<double>("reach_waypoint_threshold", REACH_WAYPOINT_THRESHOLD);
+        reach_waypoint_radius_ = nh_.param<double>("reach_waypoint_radius", REACH_WAYPOINT_RADIUS);
 
         trajectory_settings.continuity_order = 4;
         trajectory_settings.polynomial_order = 11;
@@ -133,7 +133,7 @@ public:
     {
         Eigen::Vector3d current_position = autopilot_helper_.getCurrentReferenceState().position;
         double distance = (current_position - waypoint).norm();
-        if (distance < reach_waypoint_threshold_)
+        if (distance < reach_waypoint_radius_)
             return true;
         return false;
     }
