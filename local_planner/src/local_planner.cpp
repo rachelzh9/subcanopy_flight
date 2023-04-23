@@ -16,7 +16,7 @@
 #include <rrt_planner/GetRRTPlan.h>
 
 #define WAYPOINT_HORIZON 5
-#define REACH_WAYPOINT_THRESHOLD 0.1
+#define REACH_WAYPOINT_THRESHOLD 0.2
 
 class LocalPlanner
 {
@@ -148,12 +148,17 @@ public:
 
         ROS_INFO("Executing trajectory with %d waypoints", (int)waypoints.size());
 
-        // we want to loop through the waypoints and generate a trajectory for 3 waypoints at a time
-        for(int i = 0; i < waypoints.size()-waypoint_horizon_; i++){
+        // we want to loop through the waypoints and generate a trajectory for waypoint_horizon_ waypoints at a time
+        for(int i = 0; i < waypoints.size()-1; i+=waypoint_horizon_){
 
             std::vector<Eigen::Vector3d> waypoints_subset;
-            waypoints_subset.assign(waypoints.begin() + i, 
-                        (waypoints.begin()+i+waypoint_horizon_ > waypoints.end()) ? waypoints.end() : waypoints.begin()+i+waypoint_horizon_ );
+            int j = i;
+            for (j; j<i+waypoint_horizon_ && j<waypoints.size(); j++) waypoints_subset.push_back(waypoints[j]);
+            // auto end_horizon = (waypoints.begin()+i+waypoint_horizon_-1 >= waypoints.end()) ? waypoints.end() : waypoints.begin()+i+waypoint_horizon_;
+            ROS_INFO("start: %d, end: %d", i, j-1);
+            ROS_INFO("x: %f, y: %f", waypoints_subset[0][0], waypoints_subset[0](1));
+            ROS_INFO("x: %f, y: %f", waypoints_subset.back()[0], waypoints_subset.back()[1]);
+            // waypoints_subset.assign(waypoints.begin() + i, end_horizon);
 
             start_state.position = autopilot_helper_.getCurrentReferenceState().position;
             start_state.heading = autopilot_helper_.getCurrentReferenceState().heading;
@@ -163,7 +168,8 @@ public:
             end_state.heading = 0.0;
             
             Eigen::VectorXd initial_segment_times = Eigen::VectorXd::Ones(int(waypoints_subset.size())+1);
-            trajectory_settings.way_points = waypoints_subset;
+            trajectory_settings.way_points.clear();
+            if ((int)waypoints_subset.size() > 1) trajectory_settings.way_points = waypoints_subset;
 
             quadrotor_common::Trajectory traj;
 
@@ -188,6 +194,7 @@ public:
             while(!reachedWaypoint(waypoints_subset.back())){
                 ros::spinOnce();
             }
+            ROS_INFO("Reached horizon at waypoint %d.", j-1);
         }
 
         // quadrotor_common::TrajectoryPoint end_state;
