@@ -3,9 +3,10 @@
   <group ns="rrt_planner_server">
     <rosparam file="$(find rrt_planner)/config/rrt_params.yaml" />
   </group>
+  <arg name="obs_config" default="$(find maps)/config/dense_forest.yaml"/>
 
   <node pkg="rrt_planner" type="rrt_planner_server" name="rrt_planner_server" output="screen"> 
-    <param name="map_path" value="$(find maps)/config/$(arg obs_config)"/>
+    <param name="map_path" value="$(arg obs_config)"/>
   </node>
 
   <group ns="$(arg quad_name)" >

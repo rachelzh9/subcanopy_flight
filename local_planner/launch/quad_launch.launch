@@ -16,7 +16,7 @@
   <arg name="enable_command_feedthrough" default="false"/>
   <arg name="log_file" default="$(arg mav_name)" />
   <arg name="paused" value="true"/>
-  <arg name="gui" value="true"/>
+  <arg name="gui" default="true"/>
   <arg name="use_ground_truth" value="true"/>
   <arg name="verbose" default="false"/>
   <arg name="debug" default="false"/>

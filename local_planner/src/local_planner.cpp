@@ -174,6 +174,7 @@ public:
         }
         
         autopilot_helper_.sendTrajectory(traj);
+        minSnapTrajPublisher(traj);
 
         goal_reached_ = true;
 
