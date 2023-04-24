@@ -1,3 +1,9 @@
+num_obstacles: 130
+x_min: -30.0
+x_max: 30.0
+y_min: -30.0
+y_max: 30.0
+
 obstacles:
   0:
     model_name: Tree 4
