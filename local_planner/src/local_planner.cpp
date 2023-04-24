@@ -177,15 +177,14 @@ public:
 
             quadrotor_common::Trajectory traj;
 
-            try{
-                traj = trajectory_generation_helper::
-                polynomials::generateMinimumSnapTrajectory(
+            traj = trajectory_generation_helper::polynomials::generateMinimumSnapTrajectory(
                     initial_segment_times, start_state, end_state, trajectory_settings, max_vel,
                     max_thrust, max_roll_pitch_rate, kExecLoopRate_);
-            }
-            catch(const std::exception& e){
+        
+            if(traj.trajectory_type == quadrotor_common::Trajectory::TrajectoryType::UNDEFINED){
                 ROS_WARN("Failed to generate min snap trajectory with waypoints. Attempting to generate without waypoints.");
                 trajectory_settings.way_points.clear();
+                initial_segment_times = Eigen::VectorXd::Ones(1);
                 traj = trajectory_generation_helper::polynomials::generateMinimumSnapTrajectory(
                     initial_segment_times, start_state, end_state, trajectory_settings, max_vel,
                     max_thrust, max_roll_pitch_rate, kExecLoopRate_);
