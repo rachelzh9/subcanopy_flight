@@ -150,14 +150,19 @@ public:
         waypoints.erase(waypoints.begin());
         waypoints.pop_back();
 
-        Eigen::VectorXd initial_segment_times = Eigen::VectorXd::Ones(int(waypoints.size())+1);
-        trajectory_settings.way_points = waypoints;
+        std::vector<Eigen::Vector3d> waypoints_sampled;
+        for (int i=0; (int)i<waypoints.size(); i+=3) {
+            waypoints_sampled.push_back(waypoints[i]);
+        }
+
+        Eigen::VectorXd initial_segment_times = Eigen::VectorXd::Ones(int(waypoints_sampled.size())+1);
+        trajectory_settings.way_points = waypoints_sampled;
 
         Eigen::VectorXd minimization_weights(5);
         minimization_weights << 0.0, 1.0, 1.0, 1.0, 1.0;
         trajectory_settings.minimization_weights = minimization_weights;
 
-        ROS_INFO("Executing trajectory with %d waypoints", int(waypoints.size()));
+        ROS_INFO("Executing trajectory with %d waypoints", int(waypoints_sampled.size()));
         
         quadrotor_common::Trajectory traj = trajectory_generation_helper::
             polynomials::generateMinimumSnapTrajectoryWithSegmentRefinement(
