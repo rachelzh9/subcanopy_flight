@@ -16,7 +16,7 @@
 #include <rrt_planner/GetRRTPlan.h>
 
 #define WAYPOINT_HORIZON 5
-#define REACH_WAYPOINT_THRESHOLD 0.1
+#define REACH_WAYPOINT_RADIUS 0.2
 
 class LocalPlanner
 {
@@ -47,7 +47,7 @@ public:
     double max_thrust_direction_error_;
 
     int waypoint_horizon_;
-    double reach_waypoint_threshold_;
+    double reach_waypoint_radius_;
 
     const double max_vel = 2.0;
     const double max_thrust = 15.0;
@@ -71,7 +71,7 @@ public:
         planner_client = nh_.serviceClient<rrt_planner::GetRRTPlan>("/rrt_planner_server");  // planner is in global namespace
 
         waypoint_horizon_ = nh_.param<int>("waypoint_horizon", WAYPOINT_HORIZON);
-        reach_waypoint_threshold_ = nh_.param<double>("reach_waypoint_threshold", REACH_WAYPOINT_THRESHOLD);
+        reach_waypoint_radius_ = nh_.param<double>("reach_waypoint_radius", REACH_WAYPOINT_RADIUS);
 
         trajectory_settings.continuity_order = 4;
         trajectory_settings.polynomial_order = 11;
@@ -133,12 +133,53 @@ public:
     {
         Eigen::Vector3d current_position = autopilot_helper_.getCurrentReferenceState().position;
         double distance = (current_position - waypoint).norm();
-        if (distance < reach_waypoint_threshold_)
+        if (distance < reach_waypoint_radius_)
             return true;
         return false;
     }
 
-    void executeTrajectory(quadrotor_common::TrajectoryPoint start_state, nav_msgs::Path plan)
+    void executeFullTrajectory(quadrotor_common::TrajectoryPoint start_state, nav_msgs::Path plan)
+    {
+        std::vector<Eigen::Vector3d> waypoints = pathToWaypoints(start_state, plan);
+
+        quadrotor_common::TrajectoryPoint end_state;
+        end_state.position = waypoints.back();
+        end_state.heading = 0.0;
+
+        // remove start and end states from waypoints
+        waypoints.erase(waypoints.begin());
+        waypoints.pop_back();
+
+        Eigen::VectorXd initial_segment_times = Eigen::VectorXd::Ones(int(waypoints.size())+1);
+        trajectory_settings.way_points = waypoints;
+
+        Eigen::VectorXd minimization_weights(5);
+        minimization_weights << 0.0, 1.0, 1.0, 1.0, 1.0;
+        trajectory_settings.minimization_weights = minimization_weights;
+
+        ROS_INFO("Executing trajectory with %d waypoints", int(waypoints.size()));
+        
+        quadrotor_common::Trajectory traj = trajectory_generation_helper::
+            polynomials::generateMinimumSnapTrajectoryWithSegmentRefinement(
+                initial_segment_times, start_state, end_state, trajectory_settings, max_vel,
+                max_thrust, max_roll_pitch_rate, kExecLoopRate_);
+
+        if(traj.trajectory_type == quadrotor_common::Trajectory::TrajectoryType::UNDEFINED){
+                ROS_WARN("Failed to generate min snap trajectory with waypoints. Attempting to generate without waypoints.");
+                trajectory_settings.way_points.clear();
+                initial_segment_times = Eigen::VectorXd::Ones(1);
+                traj = trajectory_generation_helper::polynomials::generateMinimumSnapTrajectory(
+                    initial_segment_times, start_state, end_state, trajectory_settings, max_vel,
+                    max_thrust, max_roll_pitch_rate, kExecLoopRate_);
+        }
+        
+        autopilot_helper_.sendTrajectory(traj);
+
+        goal_reached_ = true;
+
+    }
+
+    void executeTrajectoryWithWaypointHorizon(quadrotor_common::TrajectoryPoint start_state, nav_msgs::Path plan)
     {
         std::vector<Eigen::Vector3d> waypoints = pathToWaypoints(start_state, plan);
 
@@ -148,12 +189,17 @@ public:
 
         ROS_INFO("Executing trajectory with %d waypoints", (int)waypoints.size());
 
-        // we want to loop through the waypoints and generate a trajectory for 3 waypoints at a time
-        for(int i = 0; i < waypoints.size()-waypoint_horizon_; i++){
+        // we want to loop through the waypoints and generate a trajectory for waypoint_horizon_ waypoints at a time
+        for(int i = 0; i < waypoints.size()-1; i+=waypoint_horizon_){
 
             std::vector<Eigen::Vector3d> waypoints_subset;
-            waypoints_subset.assign(waypoints.begin() + i, 
-                        (waypoints.begin()+i+waypoint_horizon_ > waypoints.end()) ? waypoints.end() : waypoints.begin()+i+waypoint_horizon_ );
+            int j = i;
+            for (j; j<i+waypoint_horizon_ && j<waypoints.size(); j++) waypoints_subset.push_back(waypoints[j]);
+            // auto end_horizon = (waypoints.begin()+i+waypoint_horizon_-1 >= waypoints.end()) ? waypoints.end() : waypoints.begin()+i+waypoint_horizon_;
+            ROS_INFO("start: %d, end: %d", i, j-1);
+            ROS_INFO("x: %f, y: %f", waypoints_subset[0][0], waypoints_subset[0](1));
+            ROS_INFO("x: %f, y: %f", waypoints_subset.back()[0], waypoints_subset.back()[1]);
+            // waypoints_subset.assign(waypoints.begin() + i, end_horizon);
 
             start_state.position = autopilot_helper_.getCurrentReferenceState().position;
             start_state.heading = autopilot_helper_.getCurrentReferenceState().heading;
@@ -161,21 +207,25 @@ public:
             quadrotor_common::TrajectoryPoint end_state;
             end_state.position = waypoints_subset.back();
             end_state.heading = 0.0;
+
+            // remove start and end states from waypoints_subset
+            waypoints_subset.erase(waypoints_subset.begin());
+            waypoints_subset.pop_back();
             
             Eigen::VectorXd initial_segment_times = Eigen::VectorXd::Ones(int(waypoints_subset.size())+1);
-            trajectory_settings.way_points = waypoints_subset;
+            trajectory_settings.way_points.clear();
+            if ((int)waypoints_subset.size() > 1) trajectory_settings.way_points = waypoints_subset;
 
             quadrotor_common::Trajectory traj;
 
-            try{
-                traj = trajectory_generation_helper::
-                polynomials::generateMinimumSnapTrajectory(
+            traj = trajectory_generation_helper::polynomials::generateMinimumSnapTrajectory(
                     initial_segment_times, start_state, end_state, trajectory_settings, max_vel,
                     max_thrust, max_roll_pitch_rate, kExecLoopRate_);
-            }
-            catch(const std::exception& e){
+        
+            if(traj.trajectory_type == quadrotor_common::Trajectory::TrajectoryType::UNDEFINED){
                 ROS_WARN("Failed to generate min snap trajectory with waypoints. Attempting to generate without waypoints.");
                 trajectory_settings.way_points.clear();
+                initial_segment_times = Eigen::VectorXd::Ones(1);
                 traj = trajectory_generation_helper::polynomials::generateMinimumSnapTrajectory(
                     initial_segment_times, start_state, end_state, trajectory_settings, max_vel,
                     max_thrust, max_roll_pitch_rate, kExecLoopRate_);
@@ -188,22 +238,8 @@ public:
             while(!reachedWaypoint(waypoints_subset.back())){
                 ros::spinOnce();
             }
+            ROS_INFO("Reached horizon at waypoint %d.", j-1);
         }
-
-        // quadrotor_common::TrajectoryPoint end_state;
-        // end_state.position = waypoints.back();
-        // end_state.heading = 0.0;
-
-        // Eigen::VectorXd minimization_weights(5);
-        // minimization_weights << 0.0, 1.0, 1.0, 1.0, 1.0;
-        // trajectory_settings.minimization_weights = minimization_weights;
-        
-        // quadrotor_common::Trajectory traj = trajectory_generation_helper::
-        //     polynomials::generateMinimumSnapTrajectory(
-        //         initial_segment_times, start_state, end_state, trajectory_settings, max_vel,
-        //         max_thrust, max_roll_pitch_rate, kExecLoopRate_);
-        
-        // autopilot_helper_.sendTrajectory(traj);
 
         goal_reached_ = true;
 
@@ -241,7 +277,7 @@ public:
             ROS_INFO("Executing trajectory");
             nav_msgs::Path plan = getPlan(start_state, goal_pose_);
             rrt_traj_pub_.publish(plan);
-            executeTrajectory(start_state, plan);
+            executeFullTrajectory(start_state, plan);
 
             autopilot_helper_.waitForSpecificAutopilotState(autopilot::States::TRAJECTORY_CONTROL, 5.0, kExecLoopRate_);
 
