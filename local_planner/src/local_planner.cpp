@@ -138,7 +138,48 @@ public:
         return false;
     }
 
-    void executeTrajectory(quadrotor_common::TrajectoryPoint start_state, nav_msgs::Path plan)
+    void executeFullTrajectory(quadrotor_common::TrajectoryPoint start_state, nav_msgs::Path plan)
+    {
+        std::vector<Eigen::Vector3d> waypoints = pathToWaypoints(start_state, plan);
+
+        quadrotor_common::TrajectoryPoint end_state;
+        end_state.position = waypoints.back();
+        end_state.heading = 0.0;
+
+        // remove start and end states from waypoints
+        waypoints.erase(waypoints.begin());
+        waypoints.pop_back();
+
+        Eigen::VectorXd initial_segment_times = Eigen::VectorXd::Ones(int(waypoints.size())+1);
+        trajectory_settings.way_points = waypoints;
+
+        Eigen::VectorXd minimization_weights(5);
+        minimization_weights << 0.0, 1.0, 1.0, 1.0, 1.0;
+        trajectory_settings.minimization_weights = minimization_weights;
+
+        ROS_INFO("Executing trajectory with %d waypoints", int(waypoints.size()));
+        
+        quadrotor_common::Trajectory traj = trajectory_generation_helper::
+            polynomials::generateMinimumSnapTrajectoryWithSegmentRefinement(
+                initial_segment_times, start_state, end_state, trajectory_settings, max_vel,
+                max_thrust, max_roll_pitch_rate, kExecLoopRate_);
+
+        if(traj.trajectory_type == quadrotor_common::Trajectory::TrajectoryType::UNDEFINED){
+                ROS_WARN("Failed to generate min snap trajectory with waypoints. Attempting to generate without waypoints.");
+                trajectory_settings.way_points.clear();
+                initial_segment_times = Eigen::VectorXd::Ones(1);
+                traj = trajectory_generation_helper::polynomials::generateMinimumSnapTrajectory(
+                    initial_segment_times, start_state, end_state, trajectory_settings, max_vel,
+                    max_thrust, max_roll_pitch_rate, kExecLoopRate_);
+        }
+        
+        autopilot_helper_.sendTrajectory(traj);
+
+        goal_reached_ = true;
+
+    }
+
+    void executeTrajectoryWithWaypointHorizon(quadrotor_common::TrajectoryPoint start_state, nav_msgs::Path plan)
     {
         std::vector<Eigen::Vector3d> waypoints = pathToWaypoints(start_state, plan);
 
@@ -200,21 +241,6 @@ public:
             ROS_INFO("Reached horizon at waypoint %d.", j-1);
         }
 
-        // quadrotor_common::TrajectoryPoint end_state;
-        // end_state.position = waypoints.back();
-        // end_state.heading = 0.0;
-
-        // Eigen::VectorXd minimization_weights(5);
-        // minimization_weights << 0.0, 1.0, 1.0, 1.0, 1.0;
-        // trajectory_settings.minimization_weights = minimization_weights;
-        
-        // quadrotor_common::Trajectory traj = trajectory_generation_helper::
-        //     polynomials::generateMinimumSnapTrajectory(
-        //         initial_segment_times, start_state, end_state, trajectory_settings, max_vel,
-        //         max_thrust, max_roll_pitch_rate, kExecLoopRate_);
-        
-        // autopilot_helper_.sendTrajectory(traj);
-
         goal_reached_ = true;
 
     }
@@ -251,7 +277,7 @@ public:
             ROS_INFO("Executing trajectory");
             nav_msgs::Path plan = getPlan(start_state, goal_pose_);
             rrt_traj_pub_.publish(plan);
-            executeTrajectory(start_state, plan);
+            executeFullTrajectory(start_state, plan);
 
             autopilot_helper_.waitForSpecificAutopilotState(autopilot::States::TRAJECTORY_CONTROL, 5.0, kExecLoopRate_);
 
