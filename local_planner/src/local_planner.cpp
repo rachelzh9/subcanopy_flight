@@ -151,7 +151,7 @@ public:
         waypoints.pop_back();
 
         std::vector<Eigen::Vector3d> waypoints_sampled;
-        for (int i=0; (int)i<waypoints.size(); i+=3) {
+        for (int i=0; (int)i<waypoints.size(); i+=5) {
             waypoints_sampled.push_back(waypoints[i]);
         }
 
